@@ -5,10 +5,17 @@
 */
 
 var fs = require('fs');
+var rest = require('restler');
 var program = require('commander');
 var cheerio = require('cheerio');
-var HTMLFILE_DEFAULT = "index.html";
+var sleep = require('sleep');
+var HTMLFILE_DEFAULT = "temp.html";
 var CHECKSFILE_DEFAULT = "checks.json";
+
+var writeToFile = function(urlLocation) {
+    rest.get(urlLocation).on('complete', function(data) {
+        fs.writeFile(HTMLFILE_DEFAULT, data, null); });
+}
 
 var assertFileExists = function(infile) {
     var instr = infile.toString();
@@ -44,11 +51,18 @@ var clone = function(fn) {
     return fn.bind({});
 };
 
+var callback = function(cont) { fs.writeFile('temp.html', cont, null); };
+
 if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+        .option('-u, --url <external_url>', 'URL Location of file')
         .parse(process.argv);
+    if (program.url) {
+        rest.get(program.url).on('complete', callback);
+        sleep.sleep(5);
+    }
     var checkJson = checkHtmlFile(program.file, program.checks);
     var outJson = JSON.stringify(checkJson, null, 4);
     console.log(outJson);
